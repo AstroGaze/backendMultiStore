@@ -4,7 +4,8 @@ const dotenv = require("dotenv");
 const {
   searchMockStoreA,
   searchMockStoreB,
-} = require("./scrapers/mockStoreScraper"); // Import mock scrapers
+} = require("./scrapers/mockStoreScraper");
+const { searchMercadoLibre } = require("./scrapers/mercadoLibreScraper"); // <-- IMPORT NEW SCRAPER
 
 dotenv.config();
 
@@ -17,21 +18,16 @@ app.get("/", (req, res) => {
   res.send("Price Comparison API Backend is running!");
 });
 
-// --- List of available store scrapers ---
-// We'll map store identifiers to their scraper functions
 const storeScrapers = {
-  storeA: searchMockStoreA,
+  storeA: searchMockStoreA, // Keep mocks for testing if you want
   storeB: searchMockStoreB,
-  // Add more real scrapers here later, e.g.:
-  // 'mercadoLibre': searchMercadoLibre,
-  // 'amazon': searchAmazon,
+  mercadolibre: searchMercadoLibre, // <-- ADD NEW SCRAPER
 };
 
 app.get("/api/stores", (req, res) => {
   res.json(Object.keys(storeScrapers));
 });
 
-// --- Search API Endpoint ---
 app.get("/api/search", async (req, res) => {
   const { product_name, stores } = req.query;
 
@@ -39,49 +35,71 @@ app.get("/api/search", async (req, res) => {
     return res.status(400).json({ error: "Product name is required" });
   }
 
-  let activeScrapers = [];
+  let activeScrapersPromises = [];
+  const storesToQuery = [];
+
   if (stores) {
-    const requestedStores = stores.split(",").map((s) => s.trim());
-    activeScrapers = requestedStores
-      .filter((storeKey) => storeScrapers[storeKey]) // Only use valid, configured stores
-      .map((storeKey) => storeScrapers[storeKey](product_name));
+    const requestedStores = stores
+      .split(",")
+      .map((s) => s.trim().toLowerCase()); // Normalize to lowercase
+    requestedStores.forEach((storeKey) => {
+      if (storeScrapers[storeKey]) {
+        activeScrapersPromises.push(storeScrapers[storeKey](product_name));
+        storesToQuery.push(storeKey);
+      } else {
+        console.warn(`Unknown store key: ${storeKey}`);
+      }
+    });
   } else {
     // If no specific stores requested, use all
-    activeScrapers = Object.values(storeScrapers).map((scraperFn) =>
-      scraperFn(product_name)
-    );
+    Object.keys(storeScrapers).forEach((storeKey) => {
+      activeScrapersPromises.push(storeScrapers[storeKey](product_name));
+      storesToQuery.push(storeKey);
+    });
   }
 
-  if (activeScrapers.length === 0) {
+  if (activeScrapersPromises.length === 0) {
     return res
       .status(400)
       .json({ error: "No valid stores selected or available for search." });
   }
 
   console.log(
-    `Searching for: "${product_name}" across ${activeScrapers.length} store interfaces.`
+    `Searching for: "${product_name}" across ${storesToQuery.join(", ")}.`
   );
 
   try {
-    // Promise.allSettled waits for all promises to settle (either resolve or reject)
-    const results = await Promise.allSettled(activeScrapers);
-
+    const results = await Promise.allSettled(activeScrapersPromises);
     const allProductData = [];
-    results.forEach((result) => {
+
+    results.forEach((result, index) => {
+      const storeKey = storesToQuery[index]; // Get the store key for context
       if (result.status === "fulfilled" && Array.isArray(result.value)) {
-        allProductData.push(...result.value); // Spread the array of products from this scraper
+        // Add storeKey to each product for easier identification on frontend
+        const productsWithStoreKey = result.value.map((p) => ({
+          ...p,
+          storeKey,
+        }));
+        allProductData.push(...productsWithStoreKey);
       } else if (result.status === "rejected") {
-        console.error("A scraper failed:", result.reason);
-        // Optionally, you could include error info in the response for specific stores
+        console.error(`Scraper for ${storeKey} failed:`, result.reason);
+        // Optionally, include error info in the response for specific stores
+        // e.g., allProductData.push({ storeKey, error: 'Failed to fetch data', details: result.reason.message });
+      } else {
+        // Handle cases where result.value is not an array (shouldn't happen with current design)
+        console.warn(
+          `Scraper for ${storeKey} returned an unexpected result:`,
+          result.value
+        );
       }
     });
 
-    // Optional: Sort results by price, or group by product, etc.
-    allProductData.sort((a, b) => a.price - b.price);
+    allProductData.sort(
+      (a, b) => (a.price || Infinity) - (b.price || Infinity)
+    ); // Sort by price, handle missing price
 
     res.json(allProductData);
   } catch (error) {
-    // This catch is more for unexpected errors in the orchestration logic itself
     console.error("Error during search orchestration:", error);
     res
       .status(500)
