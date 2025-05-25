@@ -94,9 +94,21 @@ app.get("/api/search", async (req, res) => {
       }
     });
 
-    allProductData.sort(
-      (a, b) => (a.price || Infinity) - (b.price || Infinity)
-    ); // Sort by price, handle missing price
+    const storePriority = ["mercadolibre", "cyberpuerta"];
+    allProductData.sort((a, b) => {
+      // Dynamic: stores in storePriority first, then any new ones in insertion order
+      const aOrder =
+        storePriority.indexOf(a.storeKey) !== -1
+          ? storePriority.indexOf(a.storeKey)
+          : storePriority.length;
+      const bOrder =
+        storePriority.indexOf(b.storeKey) !== -1
+          ? storePriority.indexOf(b.storeKey)
+          : storePriority.length;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      // If same store, sort by price
+      return (a.price || Infinity) - (b.price || Infinity);
+    }); // Sort by store priority and then by price
 
     res.json(allProductData);
   } catch (error) {
