@@ -6,6 +6,7 @@ const {
   searchMockStoreB,
 } = require("./scrapers/mockStoreScraper");
 const { searchMercadoLibre } = require("./scrapers/mercadoLibreScraper"); // <-- IMPORT NEW SCRAPER
+const { searchCyberpuerta } = require("./scrapers/cyberpuertaScraper"); // Uncomment if you want to use Cyberpuerta scraper
 
 dotenv.config();
 
@@ -19,9 +20,8 @@ app.get("/", (req, res) => {
 });
 
 const storeScrapers = {
-  storeA: searchMockStoreA, // Keep mocks for testing if you want
-  storeB: searchMockStoreB,
-  mercadolibre: searchMercadoLibre, // <-- ADD NEW SCRAPER
+  mercadolibre: searchMercadoLibre,
+  cyberpuerta: searchCyberpuerta, // <-- ADD NEW SCRAPER
 };
 
 app.get("/api/stores", (req, res) => {
@@ -101,11 +101,9 @@ app.get("/api/search", async (req, res) => {
     res.json(allProductData);
   } catch (error) {
     console.error("Error during search orchestration:", error);
-    res
-      .status(500)
-      .json({
-        error: "Failed to fetch product prices due to an internal error",
-      });
+    res.status(500).json({
+      error: "Failed to fetch product prices due to an internal error",
+    });
   }
 });
 
