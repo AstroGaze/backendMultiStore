@@ -11,7 +11,7 @@ async function searchCyberpuerta(productName) {
 
   try {
     browser = await playwright.chromium.launch({
-      headless: false,
+      headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"], // Add security flags for production
     });
     const context = await browser.newContext({
