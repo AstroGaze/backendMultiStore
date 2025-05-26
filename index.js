@@ -2,6 +2,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const cron = require("node-cron");
+const cors = require("cors");
 const supabase = require("./lib/supabaseClient"); // Import your Supabase client
 
 // Scrapers (ensure paths are correct)
@@ -13,6 +14,27 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Configure CORS
+const VERCEL_FRONTEND_URL = "https://price-comparison-dashboard.vercel.app"; // <<<< YOUR VERCEL FRONTEND URL
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests from your Vercel frontend in production
+    // Allow all origins in development (if origin is undefined, e.g. from Postman or local dev proxy)
+    if (
+      !origin ||
+      process.env.NODE_ENV !== "production" ||
+      origin === VERCEL_FRONTEND_URL
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true, // If you ever use cookies or sessions
+};
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
