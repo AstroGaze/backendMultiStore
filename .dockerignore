@@ -1,0 +1,7 @@
+node_modules
+.env
+npm-debug.log
+Dockerfile
+.dockerignore
+# Add any other files/folders you don't want in your Docker image
+# e.g., local test files, documentation not needed for runtime
