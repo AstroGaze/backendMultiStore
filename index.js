@@ -307,7 +307,7 @@ async function runScheduledScrapes() {
 // Example: Run every 30 minutes - '*/30 * * * *'
 // For testing, run every 2 minutes: '*/2 * * * *'
 cron.schedule(
-  "0 */2 * * * *",
+  "0 */1 * * *",
   () => {
     // "At minute 0 past every 4th hour."
     console.log("[Scheduler] Cron job triggered by schedule.");
