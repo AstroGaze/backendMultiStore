@@ -111,25 +111,23 @@ async function searchMercadoLibre(productName) {
         }
         const price = parseFloat(priceText.replace(/[^\d.-]/g, ""));
 
-        // Product Image URL
-        // Prefer data-src for lazy-loaded images, then src
-        const imageElement = item
-          .locator(".ui-search-result-image__element")
-          .first(); // More specific image selector
+        // Product Image URL using XPath
+        const imageXPath = "(//div[@class='poly-card__portada']//img)[1]";
+        const imageElement = item.locator(`xpath=${imageXPath}`);
         let imageUrl = null;
         if ((await imageElement.count()) > 0) {
-          imageUrl =
-            (await imageElement.getAttribute("data-src")) ||
-            (await imageElement.getAttribute("src"));
-        } else {
-          // Fallback for poly component structure if needed
-          const polyImageElement = item
-            .locator(".poly-component__picture img")
+          imageUrl = await imageElement.getAttribute("src");
+        }
+        
+        // Fallback to original selectors if XPath doesn't find anything
+        if (!imageUrl) {
+          const fallbackImageElement = item
+            .locator(".ui-search-result-image__element")
             .first();
-          if ((await polyImageElement.count()) > 0) {
+          if ((await fallbackImageElement.count()) > 0) {
             imageUrl =
-              (await polyImageElement.getAttribute("data-src")) ||
-              (await polyImageElement.getAttribute("src"));
+              (await fallbackImageElement.getAttribute("data-src")) ||
+              (await fallbackImageElement.getAttribute("src"));
           }
         }
 

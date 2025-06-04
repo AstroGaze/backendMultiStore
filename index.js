@@ -343,7 +343,7 @@ cron.schedule(
 
 console.log("[Scheduler] Cron job scheduled. Waiting for next run.");
 // Optional: Run once on startup for testing
-// runScheduledScrapes().catch(console.error);
+runScheduledScrapes().catch(console.error);
 
 // === API ENDPOINTS FOR DASHBOARD & TRACKED PRODUCTS ===
 
